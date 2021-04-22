@@ -26,7 +26,12 @@ class SolrIndexer {
 
     async getFields(pid: string): Promise<SolrFields> {
         // Collect hierarchy data
-        let fedoraData = await this.hierarchyCollector.getHierarchy(pid);
+        let fedoraData: FedoraData = null;
+        try {
+            fedoraData = await this.hierarchyCollector.getHierarchy(pid);
+        } catch (e) {
+            return Promise.reject(e);
+        }
 
         // Start with basic data:
         let fields: SolrFields = {
@@ -150,7 +155,7 @@ class SolrIndexer {
                 fields[field] = fields[secondaryValueFields[field]].slice(1);
             }
         }
-    
+
         for (let field in fedoraData.relations) {
             let fieldName = "relsext." + field + "_txt_mv";
             fields[fieldName] = fedoraData.relations[field];

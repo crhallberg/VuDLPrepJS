@@ -75,7 +75,11 @@ class Fedora {
                     ? res.body
                     : res.body.toString(); // Buffer to string
             } catch (e) {
-                console.log("Fedora::getDatastream '" + datastream + "' failed", e);
+                return Promise.reject(
+                    new Error(
+                        `Fedora::getDatastream ${datastream} failed (${e})`
+                    )
+                );
             }
         }
         return this.cache[pid][datastream];

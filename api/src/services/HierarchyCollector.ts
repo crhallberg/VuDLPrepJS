@@ -52,27 +52,32 @@ class HierarchyCollector {
     }
 
     async getHierarchy(pid): Promise<FedoraData> {
-        // Use Fedora to get data
-        // TODO: type
-        // TODO: catch failure
-        // TODO: Launch promises together, Promise.all()
-        const DC = await this.fedora.getDC(pid);
-        const RELS = await this.fedora.getDatastream(pid, "RELS-EXT");
-        let result = new FedoraData(
-            pid, this.extractRelations(RELS), this.extractMetadata(DC)
-        );
-        // Create promises to retrieve parents asynchronously...
-        let promises = (result.relations.isMemberOf ?? []).map(async (resource) => {
-            let parentPid = resource.substr("info:fedora/".length);
-            if (!this.hierarchyTops.includes(parentPid)) {
-                let parent = await this.getHierarchy(parentPid);
-                result.addParent(parent);
-            }
-        });
-        // Now wait for the promises to complete before we return results, so
-        // nothing happens out of order.
-        await Promise.all(promises);
-        return result;
+        try {
+            // Use Fedora to get data
+            const [DC, RELS] = await Promise.all([
+                this.fedora.getDC(pid),
+                this.fedora.getDatastream(pid, "RELS-EXT")
+            ]);
+            let result = new FedoraData(
+                pid, this.extractRelations(RELS), this.extractMetadata(DC)
+            );
+            // Create promises to retrieve parents asynchronously...
+            let promises = (result.relations.isMemberOf ?? [])
+                .map(async (resource) => {
+                    let parentPid = resource.substr("info:fedora/".length);
+                    if (!this.hierarchyTops.includes(parentPid)) {
+                        let parent = await this.getHierarchy(parentPid);
+                        result.addParent(parent);
+                    }
+                });
+            // Now wait for the promises to complete before we return results, so
+            // nothing happens out of order.
+            await Promise.all(promises);
+            // TODO: catch failure
+            return result;
+        } catch(e) {
+            return Promise.reject(e);
+        }
     }
 }
 
